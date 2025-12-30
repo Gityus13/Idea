@@ -2,486 +2,465 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Unscrollable — Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>5-Minute Aging Website</title>
   <style>
     :root{
-      --bg:#0b0d12;
-      --fg:#e9eefc;
-      --muted:#9aa6c5;
-      --line:rgba(233,238,252,.14);
-      --card:rgba(233,238,252,.06);
-      --accent:#7cf7c7;
-      --warn:#ffcf5a;
-      --bad:#ff6b8a;
-      --blur: 0px;
+      --age: 0;                 /* 0 → 1 */
+      --tint: 210;              /* base hue */
+      --bg1: hsl(var(--tint) 30% 10%);
+      --bg2: hsl(calc(var(--tint) + 25) 25% 12%);
+      --fg:  hsl(var(--tint) 15% 92%);
+      --muted: hsl(var(--tint) 10% 70%);
+      --accent: hsl(calc(var(--tint) + 120) 70% 55%);
+      --shadow: 0 20px 50px rgba(0,0,0,.35);
+      --radius: 18px;
+      --pad: 28px;
     }
 
-    *{box-sizing:border-box}
-    html,body{height:100%;}
+    *{ box-sizing: border-box; }
+    html,body{ height:100%; }
+
     body{
       margin:0;
-      background: radial-gradient(1200px 900px at 20% 10%, rgba(124,247,199,.12), transparent 55%),
-                  radial-gradient(1200px 900px at 85% 20%, rgba(255,107,138,.10), transparent 60%),
-                  var(--bg);
-      color:var(--fg);
-      font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      overflow:hidden; /* WE control scrolling */
-      filter: blur(var(--blur));
-      transition: filter .25s ease;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color: var(--fg);
+      background: radial-gradient(1200px 800px at 20% 15%, var(--bg2), var(--bg1));
+      overflow-x:hidden;
     }
 
-    /* Top HUD */
-    .hud{
-      position:fixed; inset:16px 16px auto 16px;
-      display:flex; gap:12px; align-items:center; justify-content:space-between;
-      z-index:50;
-      pointer-events:none;
-    }
-    .chip{
-      pointer-events:none;
-      display:inline-flex; gap:10px; align-items:center;
-      background: rgba(233,238,252,.06);
-      border:1px solid var(--line);
-      padding:10px 12px;
-      border-radius:999px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
-      max-width: 70vw;
-    }
-    .chip b{font-weight:700}
-    .muted{color:var(--muted)}
-    .bar{
-      height:8px; width:min(420px, 44vw);
-      background: rgba(233,238,252,.08);
-      border:1px solid var(--line);
-      border-radius:999px;
-      overflow:hidden;
-    }
-    .bar > i{
-      display:block; height:100%;
-      width:0%;
-      background: linear-gradient(90deg, rgba(124,247,199,.95), rgba(255,207,90,.95));
-      border-radius:999px;
-      transition: width .3s ease;
-    }
-
-    /* Main stage */
-    .stage{
-      height:100%;
-      width:100%;
-      display:grid;
-      place-items:center;
-      padding: 88px 18px 24px;
-    }
-    .panel{
-      width:min(980px, 92vw);
-      border:1px solid var(--line);
-      background: rgba(233,238,252,.04);
-      border-radius: 26px;
-      overflow:hidden;
-      box-shadow: 0 30px 90px rgba(0,0,0,.45);
-      position:relative;
-    }
-
-    .section{
-      min-height: 62vh;
-      padding: 28px 26px;
-      display:grid;
-      grid-template-columns: 1.15fr .85fr;
-      gap: 18px;
-      align-items:center;
-      border-top:1px solid var(--line);
-      transform: translateY(0);
-      transition: transform .35s ease;
-    }
-    .section:first-child{border-top:none}
-    @media (max-width:860px){
-      .section{grid-template-columns:1fr; min-height: 68vh}
-    }
-
-    h1,h2{margin:0 0 10px 0; letter-spacing:-.02em}
-    h1{font-size: clamp(30px, 3.4vw, 46px)}
-    h2{font-size: clamp(24px, 2.7vw, 34px)}
-    p{margin:0 0 12px 0; color: rgba(233,238,252,.92)}
-    .card{
-      background: rgba(233,238,252,.05);
-      border:1px solid var(--line);
-      border-radius: 18px;
-      padding: 16px 16px;
-    }
-    .rule{
-      display:flex; gap:10px; align-items:flex-start;
-      margin:10px 0;
-    }
-    .dot{
-      width:10px; height:10px; border-radius:50%;
-      background: var(--accent);
-      margin-top: 6px;
-      box-shadow: 0 0 0 4px rgba(124,247,199,.10);
-      flex: 0 0 auto;
-    }
-    .dot.warn{background:var(--warn); box-shadow:0 0 0 4px rgba(255,207,90,.12)}
-    .dot.bad{background:var(--bad); box-shadow:0 0 0 4px rgba(255,107,138,.12)}
-
-    .hint{
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .lock{
-      display:inline-flex;
-      gap:10px; align-items:center;
-      padding: 10px 12px;
-      border-radius: 999px;
-      background: rgba(255,107,138,.10);
-      border:1px solid rgba(255,107,138,.25);
-      color: rgba(233,238,252,.92);
-      font-size: 13px;
-    }
-
-    /* “Silence mode” */
-    .silence{
-      position:absolute; inset:0;
-      background: rgba(0,0,0,.56);
-      backdrop-filter: blur(10px);
-      display:none;
-      z-index:40;
+    /* Aging filters applied to the whole scene */
+    .scene{
+      min-height:100%;
+      display:flex;
       align-items:center;
       justify-content:center;
-      text-align:center;
-      padding: 22px;
-    }
-    .silence.on{display:flex}
-    .silence .box{
-      width:min(560px, 92vw);
-      border-radius: 22px;
-      border:1px solid rgba(233,238,252,.18);
-      background: rgba(233,238,252,.06);
-      padding: 18px 18px;
-      box-shadow: 0 40px 120px rgba(0,0,0,.55);
-    }
-    .silence h3{margin:0 0 6px 0}
-    .silence p{margin:0; color: rgba(233,238,252,.9)}
-    .kbd{
-      display:inline-block;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: 12px;
-      padding: 2px 8px;
-      border-radius: 8px;
-      border:1px solid var(--line);
-      background: rgba(233,238,252,.06);
-      margin: 0 4px;
+      padding: clamp(18px, 4vw, 40px);
+      filter:
+        /* fade + dull */
+        saturate(calc(1 - var(--age) * .55))
+        contrast(calc(1 - var(--age) * .25))
+        brightness(calc(1 - var(--age) * .15))
+        /* old lens */
+        blur(calc(var(--age) * 1.2px));
+      transform:
+        skewX(calc(var(--age) * .55deg))
+        skewY(calc(var(--age) * .25deg));
+      transition: filter .2s linear;
+      position: relative;
     }
 
-    /* Subtle motion */
-    .pulse{
-      animation: pulse 1.8s ease-in-out infinite;
+    .card{
+      width:min(980px, 100%);
+      background: rgba(255,255,255, calc(.08 - var(--age)*.04));
+      border: 1px solid rgba(255,255,255, calc(.12 - var(--age)*.07));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: var(--pad);
+      position: relative;
+      overflow:hidden;
+      backdrop-filter: blur(10px);
     }
-    @keyframes pulse{
-      0%,100%{opacity:.85; transform: translateY(0)}
-      50%{opacity:1; transform: translateY(-2px)}
+
+    /* The card slowly "frays": border radius & padding drift */
+    .card{
+      border-radius: calc(var(--radius) - var(--age) * 10px);
+      padding: calc(var(--pad) - var(--age) * 10px);
+    }
+
+    header{
+      display:flex;
+      gap: 18px;
+      align-items:flex-start;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+
+    h1{
+      margin:0;
+      font-size: clamp(22px, 3.2vw, 44px);
+      letter-spacing: .2px;
+      line-height: 1.05;
+      text-shadow: 0 2px 16px rgba(0,0,0,.25);
+    }
+
+    p{
+      margin: 12px 0 0 0;
+      color: var(--muted);
+      max-width: 62ch;
+      line-height: 1.6;
+    }
+
+    .status{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(0,0,0,.18);
+      white-space:nowrap;
+    }
+
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      background: var(--accent);
+      box-shadow: 0 0 18px rgba(255,255,255,.15), 0 0 14px rgba(0,0,0,.25);
+      opacity: calc(1 - var(--age) * .2);
+    }
+
+    .bar{
+      height:10px;
+      width:160px;
+      border-radius:999px;
+      background: rgba(255,255,255,.10);
+      overflow:hidden;
+      position:relative;
+    }
+    .bar > i{
+      display:block;
+      height:100%;
+      width: calc((1 - var(--age)) * 100%);
+      background: linear-gradient(90deg, rgba(255,255,255,.6), rgba(255,255,255,.25));
+      border-radius:999px;
+    }
+
+    .grid{
+      margin-top: 22px;
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 18px;
+    }
+    @media (max-width: 860px){
+      .grid{ grid-template-columns: 1fr; }
+      .bar{ width: 140px; }
+    }
+
+    .panel{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255, .14);
+      background: rgba(0,0,0, .16);
+      padding: 18px;
+      position:relative;
+      overflow:hidden;
+      min-height: 180px;
+    }
+
+    .panel h2{
+      margin:0 0 8px 0;
+      font-size: 16px;
+      letter-spacing:.4px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.75);
+    }
+
+    .list{
+      display:grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .item{
+      display:flex;
+      gap: 12px;
+      align-items:center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255, .10);
+      background: rgba(255,255,255, .06);
+      transform: translateY(calc(var(--age) * 1px));
+    }
+    .ico{
+      width:34px; height:34px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.10);
+      display:grid;
+      place-items:center;
+      font-weight:700;
+      opacity: calc(1 - var(--age) * .35);
+    }
+    .item strong{ font-weight: 650; }
+    .item span{ color: rgba(255,255,255,.65); font-size: 13px; }
+
+    .actions{
+      margin-top: 18px;
+      display:flex;
+      gap: 10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    button{
+      cursor:pointer;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.08);
+      color: var(--fg);
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-weight: 600;
+      letter-spacing: .2px;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+    }
+    button:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,.12);
+      border-color: rgba(255,255,255,.28);
+    }
+
+    /* Noise overlay (gets stronger) */
+    .noise{
+      pointer-events:none;
+      position:absolute; inset:0;
+      opacity: calc(var(--age) * .22);
+      mix-blend-mode: overlay;
+      background-image:
+        repeating-linear-gradient(0deg,
+          rgba(255,255,255,.08) 0px,
+          rgba(255,255,255,.08) 1px,
+          rgba(0,0,0,0) 2px,
+          rgba(0,0,0,0) 4px),
+        repeating-linear-gradient(90deg,
+          rgba(0,0,0,.07) 0px,
+          rgba(0,0,0,.07) 1px,
+          rgba(0,0,0,0) 2px,
+          rgba(0,0,0,0) 5px);
+      filter: blur(.4px);
+    }
+
+    /* "Cracks" overlay using gradients */
+    .cracks{
+      pointer-events:none;
+      position:absolute; inset:-20%;
+      opacity: calc(var(--age) * .28);
+      transform: rotate(calc(var(--age) * 6deg));
+      background:
+        linear-gradient(115deg, rgba(255,255,255,.22) 0 1px, transparent 1px 100%),
+        linear-gradient(35deg,  rgba(255,255,255,.18) 0 1px, transparent 1px 100%),
+        linear-gradient(160deg, rgba(255,255,255,.14) 0 1px, transparent 1px 100%);
+      background-size:
+        520px 520px,
+        680px 680px,
+        840px 840px;
+      background-position:
+        0 0,
+        120px 240px,
+        280px 120px;
+      filter: blur(calc(1px + var(--age) * 1.4px));
+    }
+
+    /* Text decay: slight wobble increases over time */
+    .wobble{
+      display:inline-block;
+      animation: wobble 2.6s ease-in-out infinite;
+      animation-play-state: running;
+      transform-origin: left center;
+    }
+    @keyframes wobble{
+      0%,100%{ transform: translateY(0px) rotate(0deg); }
+      50%{ transform: translateY(calc(var(--age) * 1.2px)) rotate(calc(var(--age) * .25deg)); }
+    }
+
+    /* End screen */
+    .dead{
+      position:absolute; inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 32px;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(10px);
+      text-align:center;
+    }
+    .dead.show{ display:flex; }
+    .dead .box{
+      max-width: 680px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      border-radius: 18px;
+      padding: 22px;
+    }
+    .dead h3{
+      margin: 0 0 10px 0;
+      font-size: 22px;
+    }
+    .dead p{ margin:0; color: rgba(255,255,255,.72); }
+
+    /* tiny glitch when old */
+    .glitch{
+      position:relative;
+    }
+    .glitch::after{
+      content: "";
+      position:absolute; inset:-2px;
+      background: rgba(255,255,255,.08);
+      opacity: 0;
+      mix-blend-mode: overlay;
+      transform: translateX(0);
+      animation: glitch 4.2s infinite;
+    }
+    @keyframes glitch{
+      0%, 82%, 100%{ opacity: 0; transform: translateX(0); }
+      83%{ opacity: calc(var(--age) * .25); transform: translateX(calc(var(--age) * 6px)); }
+      84%{ opacity: 0; transform: translateX(0); }
+      91%{ opacity: calc(var(--age) * .18); transform: translateX(calc(var(--age) * -5px)); }
+      92%{ opacity: 0; }
+    }
+
+    /* Optional: respect reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      .wobble{ animation: none; }
+      .glitch::after{ animation: none; }
+      button{ transition:none; }
+      .scene{ transition:none; }
     }
   </style>
 </head>
+
 <body>
+  <div class="scene" id="scene">
+    <div class="card glitch" id="card">
+      <div class="noise"></div>
+      <div class="cracks"></div>
 
-  <div class="hud">
-    <div class="chip" id="statusChip">
-      <span class="pulse">●</span>
-      <div>
-        <div><b id="statusTitle">Locked</b> <span class="muted">— Section <span id="secNum">1</span>/<span id="secTotal">4</span></span></div>
-        <div class="muted" id="statusSub">Stay here calmly to unlock.</div>
+      <header>
+        <div>
+          <h1><span class="wobble">This website</span> is aging.</h1>
+          <p>
+            It will slowly decay for five minutes: colors fade, focus slips, cracks appear, spacing drifts —
+            until it “dies”. No refresh can save it. (Well… refresh can save it, but pretend it can’t 🙂)
+          </p>
+        </div>
+
+        <div class="status">
+          <span class="dot"></span>
+          <strong id="timeLeft">05:00</strong>
+          <div class="bar" aria-label="life bar"><i id="life"></i></div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>Memory</h2>
+          <div class="list">
+            <div class="item"><div class="ico">A</div><div><strong>Brightness</strong><br><span>Fades as time passes.</span></div></div>
+            <div class="item"><div class="ico">B</div><div><strong>Clarity</strong><br><span>Blur and noise increase.</span></div></div>
+            <div class="item"><div class="ico">C</div><div><strong>Structure</strong><br><span>Layout slowly warps.</span></div></div>
+          </div>
+
+          <div class="actions">
+            <button id="poke">Poke the site</button>
+            <button id="restart">Restart (cheat)</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Notes</h2>
+          <p style="margin:0;color:rgba(255,255,255,.72)">
+            This is a “time creature” website: it exists as a short lived organism.
+            Use it for art pages, product drops, secret experiences, or timed events.
+          </p>
+          <p id="log" style="margin-top:14px; font-size:14px;"></p>
+        </section>
       </div>
-    </div>
 
-    <div class="chip" style="gap:12px">
-      <div class="bar" aria-label="progress"><i id="barFill"></i></div>
-      <div class="muted" style="min-width:74px; text-align:right" id="timerText">…</div>
+      <div class="dead" id="dead">
+        <div class="box">
+          <h3>It’s over.</h3>
+          <p>
+            The website lived for five minutes. If you want it again, you must “rebirth” it.
+            (Refresh or press Restart.)
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 
-  <main class="stage">
-    <div class="panel" id="panel">
-      <div class="silence" id="silence">
-        <div class="box">
-          <h3>Silence.</h3>
-          <p>You moved too fast. Wait <b id="silenceLeft">3</b>s without scrolling or clicking.</p>
-          <p class="hint">Tip: slow inputs unlock the site. Rushing shuts it down.</p>
-        </div>
-      </div>
-
-      <section class="section" data-minstay="6">
-        <div>
-          <h1>Unscrollable</h1>
-          <p>This site doesn’t reward speed. It rewards attention.</p>
-
-          <div class="card">
-            <div class="rule"><span class="dot"></span><div><b>Rule:</b> Stay on each section for a minimum time.</div></div>
-            <div class="rule"><span class="dot warn"></span><div><b>Rule:</b> Scroll-spamming triggers silence.</div></div>
-            <div class="rule"><span class="dot bad"></span><div><b>Rule:</b> Clicking repeatedly also triggers silence.</div></div>
-          </div>
-
-          <div class="hint">Try to scroll. You’ll notice… you can’t. Not yet.</div>
-        </div>
-        <div class="card">
-          <div class="lock">🔒 Locked until calm behavior is detected</div>
-          <p class="hint" style="margin-top:10px">On mobile: swiping fast triggers silence too.</p>
-        </div>
-      </section>
-
-      <section class="section" data-minstay="8">
-        <div>
-          <h2>Section 2: The Pause</h2>
-          <p>You can only proceed if you give this moment time to exist.</p>
-          <div class="hint">Do nothing for a bit. Let the timer finish.</div>
-        </div>
-        <div class="card">
-          <p><b>Why?</b> Most sites train impulsiveness. This one trains control.</p>
-          <p class="muted">The UI is minimal on purpose: your attention is the input.</p>
-        </div>
-      </section>
-
-      <section class="section" data-minstay="10">
-        <div>
-          <h2>Section 3: Friction</h2>
-          <p>If you try to force progress, the site closes itself temporarily.</p>
-          <div class="hint">Scroll gently once when unlocked. Don’t “spam” it.</div>
-        </div>
-        <div class="card">
-          <p><b>Mechanic:</b> inputs are scored. Fast bursts increase “rush score.”</p>
-          <p class="muted">High rush score → silence mode.</p>
-        </div>
-      </section>
-
-      <section class="section" data-minstay="7">
-        <div>
-          <h2>Section 4: Earned Movement</h2>
-          <p>Now you understand the contract: you don’t command the site — you negotiate with it.</p>
-          <div class="hint">This is a prototype. Next we can add sound, adaptive moods, and unique endings.</div>
-        </div>
-        <div class="card">
-          <p><b>Next upgrades (still pure JS):</b></p>
-          <ul class="muted" style="margin:8px 0 0 18px">
-            <li>Behavior profile: “impatient / curious / calm”</li>
-            <li>Different story paths based on your behavior</li>
-            <li>Soft audio cues (optional)</li>
-            <li>One-time session (cannot revisit)</li>
-          </ul>
-        </div>
-      </section>
-    </div>
-  </main>
-
 <script>
 (() => {
-  const panel = document.getElementById('panel');
-  const sections = Array.from(panel.querySelectorAll('.section'));
-  const secTotal = sections.length;
+  const DURATION_MS = 5 * 60 * 1000; // 5 minutes
+  const root = document.documentElement;
+  const timeEl = document.getElementById("timeLeft");
+  const lifeEl = document.getElementById("life");
+  const deadEl = document.getElementById("dead");
+  const logEl  = document.getElementById("log");
+  const pokeBtn = document.getElementById("poke");
+  const restartBtn = document.getElementById("restart");
 
-  const statusTitle = document.getElementById('statusTitle');
-  const statusSub   = document.getElementById('statusSub');
-  const secNum      = document.getElementById('secNum');
-  const secTotalEl  = document.getElementById('secTotal');
-  const barFill     = document.getElementById('barFill');
-  const timerText   = document.getElementById('timerText');
+  // Optional: persist the "birth time" so refresh doesn't reset (same-tab only)
+  // Comment these 2 lines if you want refresh to restart.
+  const KEY = "aging_site_birth_ts";
+  let birth = Number(sessionStorage.getItem(KEY)) || Date.now();
+  sessionStorage.setItem(KEY, String(birth));
 
-  const silenceEl   = document.getElementById('silence');
-  const silenceLeft = document.getElementById('silenceLeft');
+  let pokeDebt = 0; // temporary extra aging spikes
 
-  secTotalEl.textContent = secTotal;
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
 
-  // Controlled navigation state
-  let idx = 0;
-  let unlocked = false;
-
-  // Time gating
-  let minStay = +sections[idx].dataset.minstay || 6;
-  let enteredAt = performance.now();
-
-  // “Rush” detection
-  let rush = 0;                 // increases with spam
-  let lastInputAt = 0;
-  let inputBurst = 0;
-
-  // Silence mode
-  let silencedUntil = 0;
-
-  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
-
-  function setHUD(){
-    secNum.textContent = (idx + 1);
-    minStay = +sections[idx].dataset.minstay || 6;
-
-    // Progress across sections (not time)
-    const p = (idx) / (secTotal - 1);
-    barFill.style.width = (p * 100).toFixed(0) + "%";
-
-    if (isSilenced()){
-      statusTitle.textContent = "Silence";
-      statusSub.textContent = "Wait without input.";
-      timerText.textContent = "…";
-      return;
-    }
-
-    if (!unlocked){
-      statusTitle.textContent = "Locked";
-      statusSub.textContent = "Stay here calmly to unlock.";
-    }else{
-      statusTitle.textContent = "Unlocked";
-      statusSub.textContent = "One gentle scroll/click to continue.";
-    }
+  function fmt(ms){
+    ms = Math.max(0, ms);
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return String(m).padStart(2,"0") + ":" + String(r).padStart(2,"0");
   }
 
-  function isSilenced(){
-    return performance.now() < silencedUntil;
-  }
+  function tick(){
+    const now = Date.now();
+    const elapsed = now - birth;
 
-  function enterSilence(seconds){
-    silencedUntil = performance.now() + seconds * 1000;
-    silenceEl.classList.add('on');
-    document.documentElement.style.setProperty('--blur', '1.6px');
-    setHUD();
+    // Base age 0..1
+    let age = clamp01(elapsed / DURATION_MS);
 
-    // countdown UI
-    const tick = () => {
-      const left = Math.ceil((silencedUntil - performance.now())/1000);
-      silenceLeft.textContent = String(Math.max(0,left));
-      if (isSilenced()){
-        requestAnimationFrame(tick);
-      } else {
-        silenceEl.classList.remove('on');
-        document.documentElement.style.setProperty('--blur', '0px');
-        // reset rush a bit
-        rush = Math.max(0, rush - 2);
-        inputBurst = 0;
-        setHUD();
-      }
-    };
-    tick();
-  }
+    // Add poke spikes that decay
+    pokeDebt *= 0.92;
+    age = clamp01(age + pokeDebt);
 
-  function goTo(nextIdx){
-    nextIdx = clamp(nextIdx, 0, secTotal-1);
-    idx = nextIdx;
-    unlocked = false;
-    enteredAt = performance.now();
+    root.style.setProperty("--age", age.toFixed(4));
 
-    // Smooth transform: show only current "viewport"
-    const offset = sections.slice(0, idx).reduce((acc, s) => acc + s.offsetHeight, 0);
-    panel.style.transform = `translateY(${-offset}px)`;
-    panel.style.transition = "transform .55s cubic-bezier(.2,.9,.2,1)";
+    const left = DURATION_MS - elapsed;
+    timeEl.textContent = fmt(left);
 
-    setHUD();
-  }
+    // Life bar is inverse of age
+    lifeEl.style.width = ((1 - age) * 100).toFixed(2) + "%";
 
-  // We need the panel to behave like a scroll container (without actual scrolling)
-  // So we simulate by translating the panel upward.
-  // However, offsetHeight only stable after layout.
-  function recalcAndSnap(){
-    const offset = sections.slice(0, idx).reduce((acc, s) => acc + s.offsetHeight, 0);
-    panel.style.transform = `translateY(${-offset}px)`;
-  }
-  window.addEventListener('resize', () => { recalcAndSnap(); });
+    // As it gets old, change hue slightly (like yellowing paper)
+    const hue = 210 - age * 40;
+    root.style.setProperty("--tint", hue.toFixed(1));
 
-  // Unlock timer loop
-  function loop(){
-    if (!isSilenced()){
-      const elapsed = (performance.now() - enteredAt) / 1000;
-      const remaining = Math.max(0, minStay - elapsed);
-
-      timerText.textContent = remaining > 0 ? `${remaining.toFixed(1)}s` : "ready";
-
-      if (!unlocked && remaining <= 0){
-        unlocked = true;
-      }
+    // Random micro-jitter increases
+    if (age > 0.65) {
+      const jx = (Math.random() - 0.5) * age * 1.2;
+      const jy = (Math.random() - 0.5) * age * 1.0;
+      document.getElementById("scene").style.transform =
+        `translate(${jx}px, ${jy}px)`;
     } else {
-      timerText.textContent = "…";
+      document.getElementById("scene").style.transform = "";
     }
 
-    setHUD();
-    requestAnimationFrame(loop);
-  }
-
-  // Input scoring
-  function scoreInput(){
-    const now = performance.now();
-    const dt = now - lastInputAt;
-    lastInputAt = now;
-
-    // burst detection: many inputs within short time
-    if (dt < 220) inputBurst++;
-    else inputBurst = Math.max(0, inputBurst - 1);
-
-    // rush increases with bursts
-    rush += (dt < 220 ? 1 : 0.2);
-    rush = clamp(rush, 0, 10);
-
-    // if too rushed → silence
-    if (inputBurst >= 4 || rush >= 7){
-      enterSilence(3);
-    }
-  }
-
-  function tryAdvance(dir){
-    if (isSilenced()) return;
-    if (!unlocked){
-      scoreInput(); // rushing while locked is punished
-      return;
+    // Death
+    if (elapsed >= DURATION_MS){
+      deadEl.classList.add("show");
+      logEl.textContent = "The site stopped responding. (It died.)";
+    } else {
+      deadEl.classList.remove("show");
     }
 
-    // gentle input allowed
-    goTo(idx + dir);
+    requestAnimationFrame(tick);
   }
 
-  // Prevent normal scrolling
-  window.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    scoreInput();
-    if (Math.abs(e.deltaY) < 6) return; // ignore tiny noise
-    tryAdvance(e.deltaY > 0 ? 1 : -1);
-  }, {passive:false});
-
-  // Keyboard
-  window.addEventListener('keydown', (e) => {
-    if (["ArrowDown","PageDown"," "].includes(e.key)) { e.preventDefault(); scoreInput(); tryAdvance(1); }
-    if (["ArrowUp","PageUp"].includes(e.key))         { e.preventDefault(); scoreInput(); tryAdvance(-1); }
+  pokeBtn.addEventListener("click", () => {
+    // Each poke makes it briefly older (and logs the “pain”)
+    pokeDebt = Math.min(0.35, pokeDebt + 0.06);
+    logEl.textContent = "You disturbed it. The aging accelerated for a moment.";
   });
 
-  // Click spamming penalty
-  window.addEventListener('pointerdown', () => {
-    scoreInput();
+  restartBtn.addEventListener("click", () => {
+    birth = Date.now();
+    sessionStorage.setItem(KEY, String(birth));
+    pokeDebt = 0;
+    logEl.textContent = "Rebirth initiated. Time starts again.";
   });
 
-  // Mobile touch swipe (simple)
-  let startY = null;
-  window.addEventListener('touchstart', (e) => {
-    startY = e.touches[0].clientY;
-  }, {passive:true});
-
-  window.addEventListener('touchmove', (e) => {
-    // block native scrolling
-    e.preventDefault();
-  }, {passive:false});
-
-  window.addEventListener('touchend', (e) => {
-    if (startY == null) return;
-    const endY = (e.changedTouches[0] || {}).clientY;
-    const dy = startY - endY;
-    startY = null;
-
-    scoreInput();
-    if (Math.abs(dy) < 30) return;
-    tryAdvance(dy > 0 ? 1 : -1);
-  }, {passive:true});
-
-  // Initialize
-  // Need a microtask so layout heights are correct
-  requestAnimationFrame(() => {
-    goTo(0);
-    loop();
-  });
+  tick();
 })();
 </script>
 </body>
