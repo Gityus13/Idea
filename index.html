@@ -3,211 +3,485 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ONE VISIT</title>
+  <title>Unscrollable — Prototype</title>
   <style>
-    :root { --bg:#0b0b10; --fg:#eaeaf0; --mut:#9a9aa8; }
+    :root{
+      --bg:#0b0d12;
+      --fg:#e9eefc;
+      --muted:#9aa6c5;
+      --line:rgba(233,238,252,.14);
+      --card:rgba(233,238,252,.06);
+      --accent:#7cf7c7;
+      --warn:#ffcf5a;
+      --bad:#ff6b8a;
+      --blur: 0px;
+    }
+
     *{box-sizing:border-box}
+    html,body{height:100%;}
     body{
-      margin:0; background:radial-gradient(1200px 700px at 30% 20%, #151527, var(--bg));
-      color:var(--fg); font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      overflow-x:hidden;
+      margin:0;
+      background: radial-gradient(1200px 900px at 20% 10%, rgba(124,247,199,.12), transparent 55%),
+                  radial-gradient(1200px 900px at 85% 20%, rgba(255,107,138,.10), transparent 60%),
+                  var(--bg);
+      color:var(--fg);
+      font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      overflow:hidden; /* WE control scrolling */
+      filter: blur(var(--blur));
+      transition: filter .25s ease;
     }
-    .wrap{max-width:900px; margin:0 auto; padding:48px 20px 120px}
-    .badge{
+
+    /* Top HUD */
+    .hud{
+      position:fixed; inset:16px 16px auto 16px;
+      display:flex; gap:12px; align-items:center; justify-content:space-between;
+      z-index:50;
+      pointer-events:none;
+    }
+    .chip{
+      pointer-events:none;
       display:inline-flex; gap:10px; align-items:center;
-      padding:10px 14px; border:1px solid #2a2a3a; border-radius:999px;
-      background:rgba(255,255,255,.03); backdrop-filter: blur(8px);
-      color:var(--mut); letter-spacing:.08em; text-transform:uppercase; font-size:12px
+      background: rgba(233,238,252,.06);
+      border:1px solid var(--line);
+      padding:10px 12px;
+      border-radius:999px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      max-width: 70vw;
     }
-    .dot{width:8px;height:8px;border-radius:50%;background:#53ff9a;box-shadow:0 0 18px #53ff9a}
-    h1{margin:18px 0 10px; font-size:52px; line-height:1.05}
-    p{color:var(--mut); font-size:18px; margin:0 0 18px}
+    .chip b{font-weight:700}
+    .muted{color:var(--muted)}
+    .bar{
+      height:8px; width:min(420px, 44vw);
+      background: rgba(233,238,252,.08);
+      border:1px solid var(--line);
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .bar > i{
+      display:block; height:100%;
+      width:0%;
+      background: linear-gradient(90deg, rgba(124,247,199,.95), rgba(255,207,90,.95));
+      border-radius:999px;
+      transition: width .3s ease;
+    }
+
+    /* Main stage */
+    .stage{
+      height:100%;
+      width:100%;
+      display:grid;
+      place-items:center;
+      padding: 88px 18px 24px;
+    }
+    .panel{
+      width:min(980px, 92vw);
+      border:1px solid var(--line);
+      background: rgba(233,238,252,.04);
+      border-radius: 26px;
+      overflow:hidden;
+      box-shadow: 0 30px 90px rgba(0,0,0,.45);
+      position:relative;
+    }
+
+    .section{
+      min-height: 62vh;
+      padding: 28px 26px;
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 18px;
+      align-items:center;
+      border-top:1px solid var(--line);
+      transform: translateY(0);
+      transition: transform .35s ease;
+    }
+    .section:first-child{border-top:none}
+    @media (max-width:860px){
+      .section{grid-template-columns:1fr; min-height: 68vh}
+    }
+
+    h1,h2{margin:0 0 10px 0; letter-spacing:-.02em}
+    h1{font-size: clamp(30px, 3.4vw, 46px)}
+    h2{font-size: clamp(24px, 2.7vw, 34px)}
+    p{margin:0 0 12px 0; color: rgba(233,238,252,.92)}
     .card{
-      margin-top:24px; padding:22px; border:1px solid #2a2a3a; border-radius:18px;
-      background:rgba(255,255,255,.03); box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      background: rgba(233,238,252,.05);
+      border:1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px 16px;
     }
-    .row{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:14px}
-    button{
-      border:1px solid #2a2a3a; border-radius:14px;
-      background:rgba(255,255,255,.04); color:var(--fg);
-      padding:12px 14px; cursor:pointer; font-weight:600;
+    .rule{
+      display:flex; gap:10px; align-items:flex-start;
+      margin:10px 0;
     }
-    button:hover{background:rgba(255,255,255,.07)}
-    .tiny{font-size:13px; color:var(--mut)}
-    .sealed{
-      position:fixed; inset:0; display:none; place-items:center;
-      background:rgba(0,0,0,.72); backdrop-filter: blur(10px);
-      z-index:9999;
+    .dot{
+      width:10px; height:10px; border-radius:50%;
+      background: var(--accent);
+      margin-top: 6px;
+      box-shadow: 0 0 0 4px rgba(124,247,199,.10);
+      flex: 0 0 auto;
     }
-    .sealed .box{
-      width:min(760px, 92vw);
-      border:1px solid #2a2a3a; border-radius:22px;
-      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      padding:26px;
+    .dot.warn{background:var(--warn); box-shadow:0 0 0 4px rgba(255,207,90,.12)}
+    .dot.bad{background:var(--bad); box-shadow:0 0 0 4px rgba(255,107,138,.12)}
+
+    .hint{
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 14px;
     }
-    .box h2{margin:0 0 8px; font-size:26px}
-    .box p{margin:0; color:var(--mut)}
-    .progress{
-      height:8px; border-radius:999px; background:#202033; overflow:hidden; margin-top:16px;
+
+    .lock{
+      display:inline-flex;
+      gap:10px; align-items:center;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,107,138,.10);
+      border:1px solid rgba(255,107,138,.25);
+      color: rgba(233,238,252,.92);
+      font-size: 13px;
     }
-    .bar{height:100%; width:0%; background:#53ff9a}
-    .fade-in{animation:fade .9s ease both}
-    @keyframes fade{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+
+    /* “Silence mode” */
+    .silence{
+      position:absolute; inset:0;
+      background: rgba(0,0,0,.56);
+      backdrop-filter: blur(10px);
+      display:none;
+      z-index:40;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding: 22px;
+    }
+    .silence.on{display:flex}
+    .silence .box{
+      width:min(560px, 92vw);
+      border-radius: 22px;
+      border:1px solid rgba(233,238,252,.18);
+      background: rgba(233,238,252,.06);
+      padding: 18px 18px;
+      box-shadow: 0 40px 120px rgba(0,0,0,.55);
+    }
+    .silence h3{margin:0 0 6px 0}
+    .silence p{margin:0; color: rgba(233,238,252,.9)}
+    .kbd{
+      display:inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 8px;
+      border:1px solid var(--line);
+      background: rgba(233,238,252,.06);
+      margin: 0 4px;
+    }
+
+    /* Subtle motion */
+    .pulse{
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0%,100%{opacity:.85; transform: translateY(0)}
+      50%{opacity:1; transform: translateY(-2px)}
+    }
   </style>
 </head>
 <body>
-  <div class="wrap fade-in" id="live">
-    <div class="badge"><span class="dot"></span> Live session — single entry only</div>
-    <h1 id="title">This visit will not exist again.</h1>
-    <p id="sub">
-      Leave, refresh, or come back later — and the page will be sealed.
-      Stay long enough and it will reveal more.
-    </p>
 
-    <div class="card">
-      <div id="reveal" class="tiny">Status: warming up…</div>
-      <div class="progress"><div class="bar" id="bar"></div></div>
-      <div class="row">
-        <button id="sealNow">Seal it now</button>
-        <button id="forget">(Dev) Forget this device</button>
+  <div class="hud">
+    <div class="chip" id="statusChip">
+      <span class="pulse">●</span>
+      <div>
+        <div><b id="statusTitle">Locked</b> <span class="muted">— Section <span id="secNum">1</span>/<span id="secTotal">4</span></span></div>
+        <div class="muted" id="statusSub">Stay here calmly to unlock.</div>
       </div>
-      <p class="tiny" style="margin-top:14px">
-        Tip: Scroll slowly. The page watches time + attention.
-      </p>
     </div>
 
-    <div class="card" style="margin-top:18px">
-      <h2 style="margin:0 0 8px; font-size:22px">What is happening here?</h2>
-      <p style="margin:0">
-        This site is built to feel like a one-time event. Your browser receives a “stamp”.
-        If the stamp exists, the site refuses to open again.
-      </p>
+    <div class="chip" style="gap:12px">
+      <div class="bar" aria-label="progress"><i id="barFill"></i></div>
+      <div class="muted" style="min-width:74px; text-align:right" id="timerText">…</div>
     </div>
   </div>
 
-  <div class="sealed" id="sealed">
-    <div class="box fade-in">
-      <h2>Sealed.</h2>
-      <p>
-        You’ve already used your only visit on this device/browser.
-        There is nothing to return to.
-      </p>
-      <p class="tiny" style="margin-top:10px">
-        (If you’re testing: click “Forget this device” on the live view, or clear site data.)
-      </p>
+  <main class="stage">
+    <div class="panel" id="panel">
+      <div class="silence" id="silence">
+        <div class="box">
+          <h3>Silence.</h3>
+          <p>You moved too fast. Wait <b id="silenceLeft">3</b>s without scrolling or clicking.</p>
+          <p class="hint">Tip: slow inputs unlock the site. Rushing shuts it down.</p>
+        </div>
+      </div>
+
+      <section class="section" data-minstay="6">
+        <div>
+          <h1>Unscrollable</h1>
+          <p>This site doesn’t reward speed. It rewards attention.</p>
+
+          <div class="card">
+            <div class="rule"><span class="dot"></span><div><b>Rule:</b> Stay on each section for a minimum time.</div></div>
+            <div class="rule"><span class="dot warn"></span><div><b>Rule:</b> Scroll-spamming triggers silence.</div></div>
+            <div class="rule"><span class="dot bad"></span><div><b>Rule:</b> Clicking repeatedly also triggers silence.</div></div>
+          </div>
+
+          <div class="hint">Try to scroll. You’ll notice… you can’t. Not yet.</div>
+        </div>
+        <div class="card">
+          <div class="lock">🔒 Locked until calm behavior is detected</div>
+          <p class="hint" style="margin-top:10px">On mobile: swiping fast triggers silence too.</p>
+        </div>
+      </section>
+
+      <section class="section" data-minstay="8">
+        <div>
+          <h2>Section 2: The Pause</h2>
+          <p>You can only proceed if you give this moment time to exist.</p>
+          <div class="hint">Do nothing for a bit. Let the timer finish.</div>
+        </div>
+        <div class="card">
+          <p><b>Why?</b> Most sites train impulsiveness. This one trains control.</p>
+          <p class="muted">The UI is minimal on purpose: your attention is the input.</p>
+        </div>
+      </section>
+
+      <section class="section" data-minstay="10">
+        <div>
+          <h2>Section 3: Friction</h2>
+          <p>If you try to force progress, the site closes itself temporarily.</p>
+          <div class="hint">Scroll gently once when unlocked. Don’t “spam” it.</div>
+        </div>
+        <div class="card">
+          <p><b>Mechanic:</b> inputs are scored. Fast bursts increase “rush score.”</p>
+          <p class="muted">High rush score → silence mode.</p>
+        </div>
+      </section>
+
+      <section class="section" data-minstay="7">
+        <div>
+          <h2>Section 4: Earned Movement</h2>
+          <p>Now you understand the contract: you don’t command the site — you negotiate with it.</p>
+          <div class="hint">This is a prototype. Next we can add sound, adaptive moods, and unique endings.</div>
+        </div>
+        <div class="card">
+          <p><b>Next upgrades (still pure JS):</b></p>
+          <ul class="muted" style="margin:8px 0 0 18px">
+            <li>Behavior profile: “impatient / curious / calm”</li>
+            <li>Different story paths based on your behavior</li>
+            <li>Soft audio cues (optional)</li>
+            <li>One-time session (cannot revisit)</li>
+          </ul>
+        </div>
+      </section>
     </div>
-  </div>
+  </main>
 
 <script>
 (() => {
-  // ---- CONFIG ----
-  const KEY = "onevisit:v1:used";          // localStorage flag (per browser)
-  const SESSION_KEY = "onevisit:v1:active"; // session flag (per tab session)
-  const SEAL_REASON_KEY = "onevisit:v1:reason";
+  const panel = document.getElementById('panel');
+  const sections = Array.from(panel.querySelectorAll('.section'));
+  const secTotal = sections.length;
 
-  // ---- HELPERS ----
-  const $ = (id) => document.getElementById(id);
+  const statusTitle = document.getElementById('statusTitle');
+  const statusSub   = document.getElementById('statusSub');
+  const secNum      = document.getElementById('secNum');
+  const secTotalEl  = document.getElementById('secTotal');
+  const barFill     = document.getElementById('barFill');
+  const timerText   = document.getElementById('timerText');
 
-  function showSealed(reason) {
-    $("live").style.display = "none";
-    $("sealed").style.display = "grid";
-    if (reason) localStorage.setItem(SEAL_REASON_KEY, reason);
-  }
+  const silenceEl   = document.getElementById('silence');
+  const silenceLeft = document.getElementById('silenceLeft');
 
-  function seal(reason="sealed") {
-    localStorage.setItem(KEY, "1");           // permanent (until cleared)
-    sessionStorage.removeItem(SESSION_KEY);   // end active session
-    localStorage.setItem(SEAL_REASON_KEY, reason);
-  }
+  secTotalEl.textContent = secTotal;
 
-  // ---- ENFORCE ONE-TIME ENTRY ----
-  const alreadyUsed = localStorage.getItem(KEY) === "1";
-  if (alreadyUsed) {
-    showSealed(localStorage.getItem(SEAL_REASON_KEY) || "already_used");
-    return;
-  }
+  // Controlled navigation state
+  let idx = 0;
+  let unlocked = false;
 
-  // Mark active session for this tab
-  sessionStorage.setItem(SESSION_KEY, "1");
+  // Time gating
+  let minStay = +sections[idx].dataset.minstay || 6;
+  let enteredAt = performance.now();
 
-  // Seal if user refreshes or re-enters via BFCache weirdness
-  // (We seal on unload-like events and visibility changes)
-  let sealed = false;
+  // “Rush” detection
+  let rush = 0;                 // increases with spam
+  let lastInputAt = 0;
+  let inputBurst = 0;
 
-  function sealOnce(reason) {
-    if (sealed) return;
-    sealed = true;
-    seal(reason);
-  }
+  // Silence mode
+  let silencedUntil = 0;
 
-  // If page becomes hidden (user switches away), you can choose to seal immediately.
-  // This makes it feel strict. Comment out if you want it gentler.
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      sealOnce("left_page");
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+  function setHUD(){
+    secNum.textContent = (idx + 1);
+    minStay = +sections[idx].dataset.minstay || 6;
+
+    // Progress across sections (not time)
+    const p = (idx) / (secTotal - 1);
+    barFill.style.width = (p * 100).toFixed(0) + "%";
+
+    if (isSilenced()){
+      statusTitle.textContent = "Silence";
+      statusSub.textContent = "Wait without input.";
+      timerText.textContent = "…";
+      return;
     }
-  });
 
-  // Try to catch refresh / close
-  window.addEventListener("pagehide", (e) => {
-    // pagehide fires for navigation away; persist implies bfcache
-    sealOnce(e.persisted ? "bfcache_leave" : "navigate_away");
-  });
+    if (!unlocked){
+      statusTitle.textContent = "Locked";
+      statusSub.textContent = "Stay here calmly to unlock.";
+    }else{
+      statusTitle.textContent = "Unlocked";
+      statusSub.textContent = "One gentle scroll/click to continue.";
+    }
+  }
 
-  // User intent seal button
-  $("sealNow").addEventListener("click", () => {
-    sealOnce("user_sealed");
-    showSealed("user_sealed");
-  });
+  function isSilenced(){
+    return performance.now() < silencedUntil;
+  }
 
-  // Dev/testing: forget device
-  $("forget").addEventListener("click", () => {
-    localStorage.removeItem(KEY);
-    localStorage.removeItem(SEAL_REASON_KEY);
-    sessionStorage.removeItem(SESSION_KEY);
-    location.reload();
-  });
+  function enterSilence(seconds){
+    silencedUntil = performance.now() + seconds * 1000;
+    silenceEl.classList.add('on');
+    document.documentElement.style.setProperty('--blur', '1.6px');
+    setHUD();
 
-  // ---- “LIVING” REVEAL: time + scroll attention ----
-  const start = performance.now();
-  const bar = $("bar");
-  const reveal = $("reveal");
-  const title = $("title");
-  const sub = $("sub");
+    // countdown UI
+    const tick = () => {
+      const left = Math.ceil((silencedUntil - performance.now())/1000);
+      silenceLeft.textContent = String(Math.max(0,left));
+      if (isSilenced()){
+        requestAnimationFrame(tick);
+      } else {
+        silenceEl.classList.remove('on');
+        document.documentElement.style.setProperty('--blur', '0px');
+        // reset rush a bit
+        rush = Math.max(0, rush - 2);
+        inputBurst = 0;
+        setHUD();
+      }
+    };
+    tick();
+  }
 
-  let maxProgress = 0;
+  function goTo(nextIdx){
+    nextIdx = clamp(nextIdx, 0, secTotal-1);
+    idx = nextIdx;
+    unlocked = false;
+    enteredAt = performance.now();
 
-  function update() {
-    const t = (performance.now() - start) / 1000; // seconds
-    const scroll = Math.min(1, (window.scrollY / (document.body.scrollHeight - innerHeight || 1)));
-    // attention score: weighted time + scroll
-    const score = Math.min(1, (t / 25) * 0.65 + scroll * 0.35);
-    maxProgress = Math.max(maxProgress, score);
+    // Smooth transform: show only current "viewport"
+    const offset = sections.slice(0, idx).reduce((acc, s) => acc + s.offsetHeight, 0);
+    panel.style.transform = `translateY(${-offset}px)`;
+    panel.style.transition = "transform .55s cubic-bezier(.2,.9,.2,1)";
 
-    bar.style.width = (maxProgress * 100).toFixed(1) + "%";
+    setHUD();
+  }
 
-    if (maxProgress < 0.25) {
-      reveal.textContent = "Status: warming up…";
-      title.textContent = "This visit will not exist again.";
-      sub.textContent = "Leave, refresh, or come back later — and the page will be sealed.";
-    } else if (maxProgress < 0.55) {
-      reveal.textContent = "Status: you’re staying. the page is responding…";
-      title.textContent = "The page is learning your pace.";
-      sub.textContent = "Slow attention unlocks more than fast clicks.";
-    } else if (maxProgress < 0.85) {
-      reveal.textContent = "Status: memory forming… (but only for now)";
-      title.textContent = "You’re inside a moment, not a website.";
-      sub.textContent = "When you exit, the moment ends. Permanently on this device.";
+  // We need the panel to behave like a scroll container (without actual scrolling)
+  // So we simulate by translating the panel upward.
+  // However, offsetHeight only stable after layout.
+  function recalcAndSnap(){
+    const offset = sections.slice(0, idx).reduce((acc, s) => acc + s.offsetHeight, 0);
+    panel.style.transform = `translateY(${-offset}px)`;
+  }
+  window.addEventListener('resize', () => { recalcAndSnap(); });
+
+  // Unlock timer loop
+  function loop(){
+    if (!isSilenced()){
+      const elapsed = (performance.now() - enteredAt) / 1000;
+      const remaining = Math.max(0, minStay - elapsed);
+
+      timerText.textContent = remaining > 0 ? `${remaining.toFixed(1)}s` : "ready";
+
+      if (!unlocked && remaining <= 0){
+        unlocked = true;
+      }
     } else {
-      reveal.textContent = "Status: final reveal reached.";
-      title.textContent = "Before you go: notice what you were looking for.";
-      sub.textContent = "The one thing you wanted most… did you actually face it?";
+      timerText.textContent = "…";
     }
 
-    requestAnimationFrame(update);
+    setHUD();
+    requestAnimationFrame(loop);
   }
-  update();
 
+  // Input scoring
+  function scoreInput(){
+    const now = performance.now();
+    const dt = now - lastInputAt;
+    lastInputAt = now;
+
+    // burst detection: many inputs within short time
+    if (dt < 220) inputBurst++;
+    else inputBurst = Math.max(0, inputBurst - 1);
+
+    // rush increases with bursts
+    rush += (dt < 220 ? 1 : 0.2);
+    rush = clamp(rush, 0, 10);
+
+    // if too rushed → silence
+    if (inputBurst >= 4 || rush >= 7){
+      enterSilence(3);
+    }
+  }
+
+  function tryAdvance(dir){
+    if (isSilenced()) return;
+    if (!unlocked){
+      scoreInput(); // rushing while locked is punished
+      return;
+    }
+
+    // gentle input allowed
+    goTo(idx + dir);
+  }
+
+  // Prevent normal scrolling
+  window.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    scoreInput();
+    if (Math.abs(e.deltaY) < 6) return; // ignore tiny noise
+    tryAdvance(e.deltaY > 0 ? 1 : -1);
+  }, {passive:false});
+
+  // Keyboard
+  window.addEventListener('keydown', (e) => {
+    if (["ArrowDown","PageDown"," "].includes(e.key)) { e.preventDefault(); scoreInput(); tryAdvance(1); }
+    if (["ArrowUp","PageUp"].includes(e.key))         { e.preventDefault(); scoreInput(); tryAdvance(-1); }
+  });
+
+  // Click spamming penalty
+  window.addEventListener('pointerdown', () => {
+    scoreInput();
+  });
+
+  // Mobile touch swipe (simple)
+  let startY = null;
+  window.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+  }, {passive:true});
+
+  window.addEventListener('touchmove', (e) => {
+    // block native scrolling
+    e.preventDefault();
+  }, {passive:false});
+
+  window.addEventListener('touchend', (e) => {
+    if (startY == null) return;
+    const endY = (e.changedTouches[0] || {}).clientY;
+    const dy = startY - endY;
+    startY = null;
+
+    scoreInput();
+    if (Math.abs(dy) < 30) return;
+    tryAdvance(dy > 0 ? 1 : -1);
+  }, {passive:true});
+
+  // Initialize
+  // Need a microtask so layout heights are correct
+  requestAnimationFrame(() => {
+    goTo(0);
+    loop();
+  });
 })();
 </script>
 </body>
