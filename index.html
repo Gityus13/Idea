@@ -2,295 +2,502 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title> </title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Unanswered</title>
   <style>
     :root{
-      --bg1:#070A12;
-      --bg2:#0B1024;
-      --glow: rgba(255,255,255,.12);
-      --glow2: rgba(255,255,255,.07);
+      --bg:#07090c;
+      --fg:#e9eef7;
+      --muted:rgba(233,238,247,.65);
+      --line:rgba(233,238,247,.12);
+      --glow:rgba(233,238,247,.16);
+      --warn:rgba(255,120,120,.85);
     }
-    html,body{height:100%; margin:0;}
+    *{box-sizing:border-box}
+    html,body{height:100%}
     body{
+      margin:0;
+      background: radial-gradient(1200px 900px at 70% 30%, rgba(120,170,255,.10), transparent 60%),
+                  radial-gradient(900px 600px at 20% 75%, rgba(255,255,255,.06), transparent 55%),
+                  var(--bg);
+      color:var(--fg);
+      font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      overflow-x:hidden;
+    }
+
+    /* subtle moving grain */
+    .grain{
+      pointer-events:none;
+      position:fixed; inset:-40%;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+      opacity:.09;
+      mix-blend-mode:overlay;
+      transform:translate3d(0,0,0);
+      animation: drift 12s linear infinite;
+    }
+    @keyframes drift{
+      0%{transform:translate(-2%, -1%)}
+      50%{transform:translate(2%, 1%)}
+      100%{transform:translate(-2%, -1%)}
+    }
+
+    .wrap{
+      min-height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:32px 16px;
+    }
+
+    .card{
+      width:min(860px, 100%);
+      border:1px solid var(--line);
+      border-radius:22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      box-shadow: 0 20px 70px rgba(0,0,0,.55);
       overflow:hidden;
-      background: radial-gradient(1200px 900px at 50% 40%, var(--bg2), var(--bg1));
-      cursor: none;
-      user-select:none;
-      -webkit-user-select:none;
-      touch-action:none;
-    }
-
-    /* No visible text, but keep accessibility hooks */
-    .sr-only{
-      position:absolute; width:1px; height:1px; padding:0; margin:-1px;
-      overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
-    }
-
-    #stage{
       position:relative;
-      width:100%;
-      height:100%;
-      filter: saturate(1.1);
     }
 
-    /* Soft grain overlay */
-    #stage:before{
-      content:"";
-      position:absolute; inset:0;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.20'/%3E%3C/svg%3E");
-      opacity:.10;
-      mix-blend-mode: overlay;
-      pointer-events:none;
+    .top{
+      padding:22px 22px 14px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom:1px solid var(--line);
+      backdrop-filter: blur(10px);
     }
 
-    /* “Pointer” aura */
-    #cursor{
-      position:absolute;
-      width:18px; height:18px;
-      border-radius:50%;
-      background: radial-gradient(circle, rgba(255,255,255,.18), rgba(255,255,255,0));
-      transform: translate(-50%,-50%);
-      pointer-events:none;
-      filter: blur(.2px);
+    .brand{
+      display:flex; gap:10px; align-items:center;
+      letter-spacing:.5px;
+      user-select:none;
     }
-    #cursor:after{
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      background:rgba(120,170,255,.9);
+      box-shadow:0 0 18px rgba(120,170,255,.45);
+    }
+    .title{
+      font-weight:600;
+      opacity:.92;
+    }
+
+    .meta{
+      font-size:13px;
+      color:var(--muted);
+      display:flex; gap:14px; align-items:center;
+    }
+    .meter{
+      height:8px; width:160px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      overflow:hidden;
+      background:rgba(255,255,255,.02);
+    }
+    .meter > i{
+      display:block; height:100%;
+      width:0%;
+      background:linear-gradient(90deg, rgba(120,170,255,.8), rgba(233,238,247,.55));
+      box-shadow:0 0 16px rgba(120,170,255,.28);
+      transition:width .35s ease;
+    }
+
+    .body{
+      padding:22px;
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:18px;
+    }
+    @media (max-width: 860px){
+      .body{grid-template-columns:1fr}
+      .meter{width:120px}
+    }
+
+    .panel{
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:18px;
+      background:rgba(0,0,0,.18);
+      position:relative;
+      overflow:hidden;
+    }
+    .panel::before{
       content:"";
-      position:absolute; inset:-18px;
-      border-radius:50%;
-      background: radial-gradient(circle, rgba(255,255,255,.06), rgba(255,255,255,0) 60%);
+      position:absolute; inset:-120px;
+      background: radial-gradient(circle at 30% 20%, rgba(120,170,255,.18), transparent 55%),
+                  radial-gradient(circle at 70% 75%, rgba(255,255,255,.10), transparent 55%);
+      opacity:.85;
       filter: blur(2px);
-    }
-
-    /* Rings */
-    .ring{
-      position:absolute;
-      left:50%; top:50%;
-      width: 520px; height: 520px;
-      transform: translate(-50%,-50%);
-      border-radius:50%;
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow: 0 0 40px rgba(255,255,255,.03);
-      opacity:.75;
-      transition: transform 600ms ease, opacity 600ms ease;
-    }
-    .ring:nth-child(2){ width: 360px; height:360px; opacity:.55;}
-    .ring:nth-child(3){ width: 220px; height:220px; opacity:.45;}
-    .ring:nth-child(4){ width: 120px; height:120px; opacity:.35;}
-
-    /* Orb */
-    #orb{
-      position:absolute;
-      width:72px; height:72px;
-      border-radius:50%;
-      left:50%; top:50%;
-      transform: translate(-50%,-50%);
-      background:
-        radial-gradient(circle at 35% 30%, rgba(255,255,255,.35), rgba(255,255,255,0) 40%),
-        radial-gradient(circle at 60% 70%, rgba(255,255,255,.12), rgba(255,255,255,0) 55%),
-        rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.18);
-      box-shadow:
-        0 0 40px rgba(255,255,255,.06),
-        inset 0 0 30px rgba(255,255,255,.08);
-      transition: box-shadow 300ms ease, transform 250ms ease;
-      will-change: transform, left, top;
-    }
-    #orb.grab{
-      box-shadow: 0 0 60px rgba(255,255,255,.10), inset 0 0 40px rgba(255,255,255,.10);
-      transform: translate(-50%,-50%) scale(1.05);
-    }
-
-    /* Particles */
-    .p{
-      position:absolute;
-      width:6px; height:6px;
-      border-radius:50%;
-      background: rgba(255,255,255,.18);
-      box-shadow: 0 0 18px rgba(255,255,255,.08);
-      opacity:.0;
       pointer-events:none;
-      will-change: transform, opacity;
+      transform:rotate(6deg);
+    }
+    .panel > *{position:relative}
+
+    h1{
+      margin:0 0 10px;
+      font-size: clamp(26px, 3.4vw, 44px);
+      line-height:1.1;
+      letter-spacing:-.5px;
+    }
+    p{margin:10px 0;color:var(--muted)}
+    .small{font-size:13px;color:rgba(233,238,247,.55)}
+
+    .choices{
+      display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;
+    }
+    .chip{
+      border:1px solid var(--line);
+      padding:10px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.03);
+      color:rgba(233,238,247,.86);
+      cursor:pointer;
+      user-select:none;
+      transition: transform .15s ease, background .2s ease, border-color .2s ease;
+      position:relative;
+    }
+    .chip:hover{
+      transform: translateY(-1px);
+      background:rgba(255,255,255,.06);
+      border-color:rgba(255,255,255,.18);
+    }
+    .chip:active{transform: translateY(0px) scale(.99)}
+    .chip.disabled{
+      opacity:.35;
+      cursor:not-allowed;
+      filter:saturate(.3);
     }
 
-    /* Scene shift (unlocked state) */
-    body.unlocked{
-      background: radial-gradient(1200px 900px at 50% 40%, #0a1b22, #05070e);
+    .log{
+      height: 280px;
+      overflow:auto;
+      padding-right:6px;
+      scroll-behavior:smooth;
     }
-    body.unlocked .ring{
-      border-color: rgba(255,255,255,.14);
-      opacity:.88;
+    .msg{
+      border-top:1px solid rgba(233,238,247,.08);
+      padding:12px 0;
+      animation: rise .35s ease;
     }
+    @keyframes rise{
+      from{opacity:0; transform:translateY(6px)}
+      to{opacity:1; transform:translateY(0)}
+    }
+    .msg b{color:rgba(233,238,247,.92)}
+    .msg em{color:rgba(120,170,255,.9); font-style:normal}
+
+    .footer{
+      padding:18px 22px 22px;
+      border-top:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .hint{
+      font-size:13px;
+      color:rgba(233,238,247,.55);
+    }
+    .pulse{
+      display:inline-block;
+      width:8px;height:8px;border-radius:50%;
+      background:rgba(233,238,247,.65);
+      margin-left:8px;
+      box-shadow:0 0 12px rgba(233,238,247,.18);
+      animation:pulse 1.4s ease infinite;
+    }
+    @keyframes pulse{
+      0%,100%{transform:scale(.9); opacity:.6}
+      50%{transform:scale(1.2); opacity:1}
+    }
+
+    /* Lock screen */
+    .veil{
+      position:fixed; inset:0;
+      background: rgba(7,9,12,.72);
+      backdrop-filter: blur(10px);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      z-index:50;
+    }
+    .veil.on{display:flex}
+    .lock{
+      width:min(720px, 100%);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      box-shadow:0 20px 80px rgba(0,0,0,.7);
+      padding:22px;
+    }
+    .lock h2{
+      margin:0 0 10px;
+      font-size: clamp(22px, 2.6vw, 34px);
+      letter-spacing:-.3px;
+    }
+    .lock p{margin:0;color:rgba(233,238,247,.7)}
+    .lock .q{
+      margin-top:14px;
+      padding:14px 14px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.18);
+      font-size: clamp(18px, 2.2vw, 24px);
+      color:rgba(233,238,247,.92);
+    }
+    .lock .no{
+      margin-top:14px;
+      color:var(--warn);
+      font-size:13px;
+    }
+    .blink{
+      display:inline-block;
+      width:9px;height:18px;
+      border-left:2px solid rgba(233,238,247,.78);
+      margin-left:6px;
+      transform:translateY(3px);
+      animation: blink 1s steps(1,end) infinite;
+    }
+    @keyframes blink{50%{opacity:0}}
   </style>
 </head>
 <body>
-  <span class="sr-only" aria-hidden="false">
-    Interactive visual experience. Use mouse or touch. No visible text by design.
-  </span>
+  <div class="grain"></div>
 
-  <div id="stage" aria-label="Interactive shape field">
-    <div class="ring"></div>
-    <div class="ring"></div>
-    <div class="ring"></div>
-    <div class="ring"></div>
+  <div class="wrap">
+    <main class="card" aria-label="Unanswered experience">
+      <div class="top">
+        <div class="brand">
+          <span class="dot"></span>
+          <div class="title">UNANSWERED</div>
+        </div>
+        <div class="meta">
+          <span id="time">00:00</span>
+          <div class="meter" aria-label="progress"><i id="bar"></i></div>
+        </div>
+      </div>
 
-    <div id="orb" role="button" aria-label="Interactive orb"></div>
-    <div id="cursor"></div>
+      <section class="body">
+        <div class="panel">
+          <h1 id="headline">You came here for an answer.</h1>
+          <p id="sub">
+            This place doesn’t give answers. It changes what you notice.
+          </p>
+          <p class="small">
+            Choose any phrases below. The site will remember your *pattern* — not your choices.
+          </p>
+
+          <div class="choices" id="choices"></div>
+        </div>
+
+        <div class="panel">
+          <div class="log" id="log" aria-label="timeline"></div>
+          <p class="small" id="status">Listening<span class="pulse"></span></p>
+        </div>
+      </section>
+
+      <div class="footer">
+        <div class="hint">Tip: try to “win” by clicking faster. The site reacts.</div>
+        <div class="hint" id="pressure">Calm: 0</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="veil" id="veil" role="dialog" aria-modal="true">
+    <div class="lock">
+      <h2>It ends with one question.</h2>
+      <p>You can’t answer here. That’s the point.</p>
+      <div class="q" id="finalQ">…<span class="blink"></span></div>
+      <div class="no">This page will lock in <b id="lockIn">12</b> seconds. Refreshing won’t help.</div>
+    </div>
   </div>
 
   <script>
-    // ===== Utilities =====
-    const stage = document.getElementById('stage');
-    const orb = document.getElementById('orb');
-    const cursor = document.getElementById('cursor');
-    const rings = [...document.querySelectorAll('.ring')];
+    // --- Concept: a site that ends with an unanswerable question ---
+    const phrases = [
+      "I want certainty",
+      "I want speed",
+      "I want control",
+      "I want to be understood",
+      "I want a shortcut",
+      "I want the truth",
+      "I want to be right",
+      "I want to be safe",
+      "I want to start over",
+      "I want less noise",
+      "I want a sign",
+      "I want to forget",
+      "I want to prove something",
+      "I want to feel calm",
+      "I want to be seen"
+    ];
 
-    let w = innerWidth, h = innerHeight;
-    let mx = w/2, my = h/2;
-    let ox = w/2, oy = h/2;
-    let vx = 0, vy = 0;
-    let dragging = false;
-    let holdStart = null;
-    let unlocked = false;
+    const logEl = document.getElementById("log");
+    const choicesEl = document.getElementById("choices");
+    const bar = document.getElementById("bar");
+    const timeEl = document.getElementById("time");
+    const pressureEl = document.getElementById("pressure");
+    const statusEl = document.getElementById("status");
+    const headline = document.getElementById("headline");
+    const sub = document.getElementById("sub");
+    const veil = document.getElementById("veil");
+    const finalQ = document.getElementById("finalQ");
+    const lockIn = document.getElementById("lockIn");
 
-    addEventListener('resize', () => {
-      w = innerWidth; h = innerHeight;
-      mx = Math.min(Math.max(mx, 0), w);
-      my = Math.min(Math.max(my, 0), h);
+    let start = Date.now();
+    let clicks = 0;
+    let lastClickAt = 0;
+    let calmScore = 0;        // low = calm, high = rushed
+    let stages = 0;
+    let locked = false;
+
+    const DURATION_MS = 75_000; // whole experience length
+    const LOCK_COUNTDOWN = 12;
+
+    // render chips
+    phrases.forEach((t, idx) => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.type = "button";
+      b.textContent = t;
+      b.addEventListener("click", () => onPick(idx, t, b));
+      choicesEl.appendChild(b);
     });
 
-    // ===== Sound (WebAudio; only after first interaction) =====
-    let audioCtx = null;
-    function ensureAudio(){
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
-    function ping(freq=220, dur=0.08, gain=0.05){
-      if (!audioCtx) return;
-      const t = audioCtx.currentTime;
-      const o = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(freq, t);
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(gain, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.connect(g).connect(audioCtx.destination);
-      o.start(t);
-      o.stop(t + dur + 0.02);
+    function addMsg(who, text){
+      const d = document.createElement("div");
+      d.className = "msg";
+      d.innerHTML = `<b>${who}:</b> ${text}`;
+      logEl.appendChild(d);
+      logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // ===== Particles =====
-    const parts = [];
-    for (let i=0;i<26;i++){
-      const d = document.createElement('div');
-      d.className = 'p';
-      stage.appendChild(d);
-      parts.push({el:d, a: Math.random()*Math.PI*2, r: 40+Math.random()*260, s: 0.5+Math.random()*1.8});
-    }
+    function pad(n){ return String(n).padStart(2,"0"); }
 
-    function setOrb(x,y){
-      ox = x; oy = y;
-      orb.style.left = x + 'px';
-      orb.style.top = y + 'px';
-    }
-    setOrb(ox,oy);
+    function onPick(idx, text, el){
+      if (locked) return;
 
-    // ===== Pointer / touch handling =====
-    function pointerMove(x,y){
-      mx = x; my = y;
-      cursor.style.left = x + 'px';
-      cursor.style.top = y + 'px';
-      if (dragging) setOrb(x,y);
-    }
+      const now = Date.now();
+      clicks++;
 
-    stage.addEventListener('pointermove', (e) => {
-      pointerMove(e.clientX, e.clientY);
-    }, {passive:true});
+      // pressure: if user clicks too fast, calmScore rises
+      const delta = lastClickAt ? (now - lastClickAt) : 900;
+      lastClickAt = now;
 
-    stage.addEventListener('pointerdown', (e) => {
-      ensureAudio();
-      const rect = orb.getBoundingClientRect();
-      const cx = rect.left + rect.width/2;
-      const cy = rect.top + rect.height/2;
-      const dx = e.clientX - cx;
-      const dy = e.clientY - cy;
-      const dist = Math.hypot(dx,dy);
+      const rushed = delta < 280;
+      calmScore += rushed ? 2 : -0.5;
+      calmScore = Math.max(0, Math.min(30, calmScore));
 
-      if (dist < 60){
-        dragging = true;
-        orb.classList.add('grab');
-        holdStart = performance.now();
-        ping(220 + dist*1.2, 0.06, 0.06);
+      pressureEl.textContent = `Calm: ${Math.round(calmScore)}`;
+
+      // disable chip after click to avoid "answering"
+      el.classList.add("disabled");
+      el.disabled = true;
+
+      // write log with subtle manipulation
+      addMsg("You", `<em>${text}</em>`);
+      if (rushed){
+        addMsg("Site", "You’re trying to finish. That’s not the same as understanding.");
       } else {
-        // “tap in space” creates a softer response
-        ping(140 + (e.clientX/w)*260, 0.05, 0.03);
-      }
-      stage.setPointerCapture(e.pointerId);
-    });
-
-    stage.addEventListener('pointerup', (e) => {
-      dragging = false;
-      orb.classList.remove('grab');
-      holdStart = null;
-      ping(180, 0.05, 0.03);
-      stage.releasePointerCapture(e.pointerId);
-    });
-
-    // Prevent context menu (long press)
-    addEventListener('contextmenu', (e) => e.preventDefault());
-
-    // ===== Animation loop =====
-    function loop(t){
-      // spring orb toward center when not dragging (gentle “gravity”)
-      if (!dragging){
-        const tx = w/2 + (mx - w/2) * 0.05;
-        const ty = h/2 + (my - h/2) * 0.05;
-        vx += (tx - ox) * 0.0025;
-        vy += (ty - oy) * 0.0025;
-        vx *= 0.92; vy *= 0.92;
-        setOrb(ox + vx, oy + vy);
+        addMsg("Site", "Noted. The pattern matters more than the sentence.");
       }
 
-      // ring reaction based on distance to cursor
-      const dxm = mx - ox, dym = my - oy;
-      const d = Math.hypot(dxm,dym);
-      const pull = Math.max(0, 1 - d / 520);
-
-      rings.forEach((r, i) => {
-        const s = 1 + pull * (0.02 + i*0.01);
-        const rot = (t*0.0006) * (i%2?1:-1);
-        r.style.transform = `translate(-50%,-50%) scale(${s}) rotate(${rot}rad)`;
-        r.style.opacity = (0.35 + pull*0.55) * (1 - i*0.12);
-      });
-
-      // particles orbit around orb (no text = “alive” field)
-      parts.forEach((p, idx) => {
-        p.a += 0.0025 * p.s * (unlocked ? 1.35 : 1.0);
-        const rr = p.r + Math.sin(t*0.001 + idx)*10*(unlocked?1.6:1.0);
-        const px = ox + Math.cos(p.a)*rr;
-        const py = oy + Math.sin(p.a)*rr;
-        p.el.style.transform = `translate(${px}px, ${py}px) translate(-50%,-50%)`;
-        const op = 0.18 + pull*0.35;
-        p.el.style.opacity = op;
-      });
-
-      // hold-to-unlock: keep pressed on orb ~1.2s
-      if (!unlocked && holdStart && dragging){
-        const held = t - holdStart;
-        if (held > 1200){
-          unlocked = true;
-          document.body.classList.add('unlocked');
-          // rising chord
-          ping(220, 0.08, 0.05);
-          setTimeout(()=>ping(330, 0.09, 0.05), 80);
-          setTimeout(()=>ping(440, 0.10, 0.05), 170);
-        }
-      }
-
-      requestAnimationFrame(loop);
+      // stage changes
+      if (clicks === 3) stage1();
+      if (clicks === 6) stage2();
+      if (clicks === 9) stage3();
+      if (clicks >= 11) prepareEnding();
     }
-    requestAnimationFrame(loop);
+
+    function stage1(){
+      stages++;
+      headline.textContent = "You’re not choosing. You’re revealing.";
+      sub.textContent = "The speed of your choices is louder than the words.";
+      statusEl.innerHTML = 'Measuring impatience<span class="pulse"></span>';
+    }
+    function stage2(){
+      stages++;
+      headline.textContent = "Most people click to escape silence.";
+      sub.textContent = "But silence is where the real question hides.";
+      statusEl.innerHTML = 'Listening between clicks<span class="pulse"></span>';
+    }
+    function stage3(){
+      stages++;
+      headline.textContent = "What you avoid will return.";
+      sub.textContent = "Not as punishment. As a mirror.";
+      statusEl.innerHTML = 'Preparing the ending<span class="pulse"></span>';
+    }
+
+    function prepareEnding(){
+      // Only once
+      if (locked) return;
+      locked = true;
+
+      // create a question based on behavior (no server, no tracking)
+      const rushed = calmScore >= 12;
+      const theme = rushed
+        ? "If you had to sit with uncertainty for one hour, what would you lose?"
+        : "If nobody ever confirmed you were right, what would you still choose?";
+
+      // show veil a bit later to feel cinematic
+      setTimeout(() => {
+        veil.classList.add("on");
+        finalQ.textContent = theme;
+        countdown(LOCK_COUNTDOWN);
+      }, 900);
+    }
+
+    function countdown(n){
+      lockIn.textContent = n;
+      if (n <= 0){
+        hardLock();
+        return;
+      }
+      setTimeout(() => countdown(n-1), 1000);
+    }
+
+    function hardLock(){
+      // Remove interactivity, blank the page content behind veil
+      document.querySelector(".card").style.filter = "blur(6px)";
+      document.querySelector(".card").style.opacity = ".2";
+      statusEl.textContent = "Locked.";
+      addMsg("Site", "There is no input field because the answer is not for the screen.");
+
+      // Trap focus (simple)
+      document.body.addEventListener("keydown", (e) => {
+        // prevent refresh shortcuts feel "useless"
+        if ((e.ctrlKey || e.metaKey) && ["r","R"].includes(e.key)) e.preventDefault();
+        if (e.key === "Escape") e.preventDefault();
+      }, {capture:true});
+    }
+
+    // time/progress loop
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const mm = Math.floor(elapsed/60000);
+      const ss = Math.floor((elapsed%60000)/1000);
+      timeEl.textContent = `${pad(mm)}:${pad(ss)}`;
+
+      const pct = Math.min(100, Math.round(elapsed / DURATION_MS * 100));
+      bar.style.width = pct + "%";
+
+      // If user does nothing, end anyway (forces completion)
+      if (!locked && elapsed > 45_000) {
+        addMsg("Site", "You waited. That’s rarer than you think.");
+        prepareEnding();
+      }
+
+      requestAnimationFrame(tick);
+    };
+    tick();
+
+    // initial log
+    addMsg("Site", "You will not get a form. You will get a question.");
+    addMsg("Site", "Pick a few phrases. Try not to rush.");
   </script>
 </body>
 </html>
