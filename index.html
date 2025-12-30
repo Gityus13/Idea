@@ -1,52 +1,382 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>Start</title>
-  <link id="favicon" rel="icon" href="favicon-gray.ico">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🟦░░░░░░░░░░ 0%</title>
+
+  <!-- We will replace this favicon dynamically -->
+  <link id="fav" rel="icon" href="data:," />
+
   <style>
+    :root {
+      --bg: #05060a;
+      --fg: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.65);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
-      height: 300vh;
-      background: #111;
-      color: #fff;
-      font-size: 3rem;
-      padding: 50px;
+      margin: 0;
+      color: var(--fg);
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(255,0,170,.20), transparent 55%),
+                  radial-gradient(1000px 700px at 80% 20%, rgba(0,220,255,.20), transparent 55%),
+                  radial-gradient(900px 700px at 40% 90%, rgba(130,255,0,.14), transparent 55%),
+                  var(--bg);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      overflow-x: hidden;
+    }
+
+    /* Smooth “premium” scroll feeling */
+    .wrap {
+      min-height: 520vh; /* long scroll */
+      position: relative;
+      padding: 64px 18px 120px;
+    }
+
+    /* Floating neon blobs */
+    .blob {
+      position: fixed;
+      inset: auto;
+      width: 520px;
+      height: 520px;
+      filter: blur(40px);
+      opacity: .55;
+      border-radius: 999px;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      transform: translate3d(0,0,0);
+      will-change: transform;
+    }
+    .b1 { left: -120px; top: -140px; background: radial-gradient(circle at 30% 30%, #ff2bd6, transparent 60%); }
+    .b2 { right: -160px; top: 90px; background: radial-gradient(circle at 30% 30%, #00e5ff, transparent 60%); }
+    .b3 { left: 30%; bottom: -240px; background: radial-gradient(circle at 30% 30%, #7cff00, transparent 60%); }
+
+    /* Header card */
+    .hero {
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 28px 26px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+      border: 1px solid rgba(255,255,255,.14);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 80px rgba(0,0,0,.35);
+      position: sticky;
+      top: 18px;
+      z-index: 5;
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(22px, 3vw, 36px);
+      letter-spacing: .2px;
+    }
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(14px, 1.5vw, 16px);
+      line-height: 1.45;
+    }
+
+    /* Sections */
+    .sections {
+      max-width: 1050px;
+      margin: 32px auto 0;
+      display: grid;
+      gap: 18px;
+    }
+    .card {
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+      box-shadow: 0 14px 50px rgba(0,0,0,.35);
+      overflow: hidden;
+      position: relative;
+      transform: translateY(24px);
+      opacity: 0;
+      transition: transform .9s cubic-bezier(.2,.8,.2,1), opacity .9s ease;
+      min-height: 72vh;
+    }
+    .card.show { transform: translateY(0); opacity: 1; }
+
+    /* Color bands inside each card */
+    .band {
+      position: absolute;
+      inset: -40%;
+      background: conic-gradient(from 140deg,
+        rgba(255,0,160,.9),
+        rgba(255,180,0,.9),
+        rgba(0,255,140,.9),
+        rgba(0,190,255,.9),
+        rgba(140,0,255,.9),
+        rgba(255,0,160,.9)
+      );
+      opacity: .38;
+      filter: blur(18px);
+      transform: rotate(0deg);
+      animation: spin 10s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .content {
+      position: relative;
+      padding: 32px 28px;
+      display: grid;
+      gap: 10px;
+    }
+    .label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      width: fit-content;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      backdrop-filter: blur(10px);
+      font-size: 13px;
+      color: rgba(255,255,255,.86);
+    }
+    .big {
+      font-size: clamp(24px, 3.2vw, 44px);
+      margin: 0;
+      line-height: 1.06;
+      letter-spacing: .2px;
+      text-shadow: 0 12px 45px rgba(0,0,0,.35);
+    }
+    .small {
+      margin: 0;
+      max-width: 68ch;
+      color: rgba(255,255,255,.74);
+      font-size: clamp(14px, 1.5vw, 16px);
+      line-height: 1.55;
+    }
+
+    /* Scroll progress bar */
+    .topbar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      height: 4px;
+      width: 100%;
+      background: rgba(255,255,255,.08);
+      z-index: 99;
+    }
+    .topbar > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff2bd6, #00e5ff, #7cff00, #ffd000, #a000ff);
+      box-shadow: 0 0 18px rgba(255,255,255,.25);
     }
   </style>
 </head>
-<body>
 
-Scroll down slowly.
+<body>
+  <div class="topbar"><i id="bar"></i></div>
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+
+  <div class="wrap">
+    <div class="hero">
+      <h1>Scroll. The tab becomes alive.</h1>
+      <p>
+        The browser tab title will animate, and the favicon will shift color + show progress.
+        (Real title text color cannot be changed by any website, but we create the illusion.)
+      </p>
+    </div>
+
+    <div class="sections" id="sections">
+      <section class="card"><div class="band"></div>
+        <div class="content">
+          <div class="label">🌈 Phase 1 • Soft</div>
+          <h2 class="big">Color wakes up.</h2>
+          <p class="small">As you scroll, the tab title grows brighter, and the favicon morphs into a neon progress ring.</p>
+        </div>
+      </section>
+
+      <section class="card"><div class="band"></div>
+        <div class="content">
+          <div class="label">⚡ Phase 2 • Faster</div>
+          <h2 class="big">Motion gets confident.</h2>
+          <p class="small">Title frames animate faster. The favicon hue cycles smoothly, synced to your scroll.</p>
+        </div>
+      </section>
+
+      <section class="card"><div class="band"></div>
+        <div class="content">
+          <div class="label">🧿 Phase 3 • Hypnotic</div>
+          <h2 class="big">The tab becomes a mini-screen.</h2>
+          <p class="small">You’ll start noticing the tab more than the page. That’s the trick: attention moves.</p>
+        </div>
+      </section>
+
+      <section class="card"><div class="band"></div>
+        <div class="content">
+          <div class="label">✅ Phase 4 • Finish</div>
+          <h2 class="big">It peaks, then calms.</h2>
+          <p class="small">At the end the animation slows, as if the site “breathes out”.</p>
+        </div>
+      </section>
+    </div>
+  </div>
 
 <script>
-  const titles = [
-    "Still here",
-    "Keep going",
-    "Something is changing",
-    "Notice the silence",
-    "You are near"
+  // ---------- Helpers ----------
+  const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+  const lerp  = (a, b, t) => a + (b - a) * t;
+
+  function scrollRatio() {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    return max <= 0 ? 0 : clamp(window.scrollY / max, 0, 1);
+  }
+
+  // ---------- Title animation (tab text) ----------
+  // We can't color the title text, so we "animate color" using colored emojis/blocks.
+  const titlePhrases = [
+    "soft glow",
+    "brighter",
+    "neon shift",
+    "pulse",
+    "peak",
+    "calm"
   ];
 
-  const favicons = [
-    "favicon-gray.ico",
-    "favicon-blue.ico",
-    "favicon-yellow.ico",
-    "favicon-orange.ico",
-    "favicon-red.ico"
-  ];
+  // Frames for a rainbow-ish bar illusion
+  const bars = ["🟥","🟧","🟨","🟩","🟦","🟪"];
+  function makeBar(p) {
+    const total = 10;
+    const filled = Math.round(p * total);
+    let out = "";
+    for (let i = 0; i < total; i++) {
+      if (i < filled) out += bars[i % bars.length];
+      else out += "░";
+    }
+    return out;
+  }
 
-  window.addEventListener("scroll", () => {
-    const scrollRatio = window.scrollY / (document.body.scrollHeight - window.innerHeight);
-    const index = Math.min(
-      titles.length - 1,
-      Math.floor(scrollRatio * titles.length)
-    );
+  let titleTick = 0;
+  let rafTitle = null;
 
-    document.title = titles[index];
+  function startTitleAnimator() {
+    if (rafTitle) return;
 
-    const favicon = document.getElementById("favicon");
-    favicon.href = favicons[index];
-  });
+    const loop = () => {
+      const p = scrollRatio();
+      const intensity = lerp(0.25, 1.0, p);         // more scroll => more intensity
+      const fps = lerp(6, 22, intensity);           // animate faster later
+      const stepEveryMs = 1000 / fps;
+
+      // Use time slicing so it doesn't update too fast
+      const now = performance.now();
+      if (!loop.last) loop.last = now;
+      const dt = now - loop.last;
+
+      if (dt >= stepEveryMs) {
+        loop.last = now;
+        titleTick++;
+
+        const phraseIndex = Math.floor(p * (titlePhrases.length - 1));
+        const phrase = titlePhrases[phraseIndex];
+
+        const percent = Math.round(p * 100);
+        const bar = makeBar(p);
+
+        // Add a tiny "sparkle" that changes with titleTick
+        const sparkles = ["✦","✧","✺","✹","✶","✷"];
+        const sp = sparkles[titleTick % sparkles.length];
+
+        document.title = `${bar} ${percent}% ${sp} ${phrase}`;
+      }
+
+      rafTitle = requestAnimationFrame(loop);
+    };
+
+    rafTitle = requestAnimationFrame(loop);
+  }
+
+  // ---------- Favicon animation (real color change) ----------
+  // We generate a tiny 64x64 icon using Canvas, then set it as a data URL favicon.
+  const favLink = document.getElementById("fav");
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+
+  function drawFavicon(p) {
+    // Hue cycles with scroll
+    const hue = Math.floor(lerp(320, 40, p)); // pink/purple -> orange/yellow vibe
+    const hue2 = (hue + 120) % 360;
+
+    ctx.clearRect(0, 0, 64, 64);
+
+    // Background glow
+    const g = ctx.createRadialGradient(32, 28, 4, 32, 32, 34);
+    g.addColorStop(0, `hsla(${hue}, 100%, 60%, .95)`);
+    g.addColorStop(1, `hsla(${hue2}, 100%, 55%, .15)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+
+    // Outer ring
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = "rgba(255,255,255,.25)";
+    ctx.beginPath();
+    ctx.arc(32, 32, 22, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Progress arc
+    ctx.lineWidth = 7;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = `hsla(${hue2}, 100%, 65%, .95)`;
+    ctx.beginPath();
+    ctx.arc(32, 32, 22, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * p));
+    ctx.stroke();
+
+    // Inner dot
+    ctx.fillStyle = `hsla(${hue}, 100%, 75%, .95)`;
+    ctx.beginPath();
+    ctx.arc(32, 32, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Update favicon
+    favLink.href = canvas.toDataURL("image/png");
+  }
+
+  // ---------- Scroll visuals (blobs move, cards reveal, progress bar) ----------
+  const bar = document.getElementById("bar");
+  const cards = Array.from(document.querySelectorAll(".card"));
+  const blobs = {
+    b1: document.querySelector(".b1"),
+    b2: document.querySelector(".b2"),
+    b3: document.querySelector(".b3"),
+  };
+
+  function onScroll() {
+    const p = scrollRatio();
+    bar.style.width = (p * 100).toFixed(2) + "%";
+
+    // Move blobs (parallax)
+    const y = window.scrollY;
+    blobs.b1.style.transform = `translate3d(${Math.sin(y/700)*40}px, ${y*0.06}px, 0)`;
+    blobs.b2.style.transform = `translate3d(${Math.cos(y/800)*50}px, ${y*0.08}px, 0)`;
+    blobs.b3.style.transform = `translate3d(${Math.sin(y/900)*60}px, ${-y*0.04}px, 0)`;
+
+    // Reveal cards
+    const vh = window.innerHeight;
+    for (const c of cards) {
+      const r = c.getBoundingClientRect();
+      if (r.top < vh * 0.82) c.classList.add("show");
+    }
+
+    // Update favicon in real time
+    drawFavicon(p);
+  }
+
+  // Start!
+  startTitleAnimator();
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll);
+  onScroll();
 </script>
-
 </body>
 </html>
