@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ONE VISIT</title>
+  <style>
+    :root { --bg:#0b0b10; --fg:#eaeaf0; --mut:#9a9aa8; }
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:radial-gradient(1200px 700px at 30% 20%, #151527, var(--bg));
+      color:var(--fg); font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      overflow-x:hidden;
+    }
+    .wrap{max-width:900px; margin:0 auto; padding:48px 20px 120px}
+    .badge{
+      display:inline-flex; gap:10px; align-items:center;
+      padding:10px 14px; border:1px solid #2a2a3a; border-radius:999px;
+      background:rgba(255,255,255,.03); backdrop-filter: blur(8px);
+      color:var(--mut); letter-spacing:.08em; text-transform:uppercase; font-size:12px
+    }
+    .dot{width:8px;height:8px;border-radius:50%;background:#53ff9a;box-shadow:0 0 18px #53ff9a}
+    h1{margin:18px 0 10px; font-size:52px; line-height:1.05}
+    p{color:var(--mut); font-size:18px; margin:0 0 18px}
+    .card{
+      margin-top:24px; padding:22px; border:1px solid #2a2a3a; border-radius:18px;
+      background:rgba(255,255,255,.03); box-shadow: 0 18px 60px rgba(0,0,0,.35);
+    }
+    .row{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:14px}
+    button{
+      border:1px solid #2a2a3a; border-radius:14px;
+      background:rgba(255,255,255,.04); color:var(--fg);
+      padding:12px 14px; cursor:pointer; font-weight:600;
+    }
+    button:hover{background:rgba(255,255,255,.07)}
+    .tiny{font-size:13px; color:var(--mut)}
+    .sealed{
+      position:fixed; inset:0; display:none; place-items:center;
+      background:rgba(0,0,0,.72); backdrop-filter: blur(10px);
+      z-index:9999;
+    }
+    .sealed .box{
+      width:min(760px, 92vw);
+      border:1px solid #2a2a3a; border-radius:22px;
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      padding:26px;
+    }
+    .box h2{margin:0 0 8px; font-size:26px}
+    .box p{margin:0; color:var(--mut)}
+    .progress{
+      height:8px; border-radius:999px; background:#202033; overflow:hidden; margin-top:16px;
+    }
+    .bar{height:100%; width:0%; background:#53ff9a}
+    .fade-in{animation:fade .9s ease both}
+    @keyframes fade{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+  </style>
+</head>
+<body>
+  <div class="wrap fade-in" id="live">
+    <div class="badge"><span class="dot"></span> Live session — single entry only</div>
+    <h1 id="title">This visit will not exist again.</h1>
+    <p id="sub">
+      Leave, refresh, or come back later — and the page will be sealed.
+      Stay long enough and it will reveal more.
+    </p>
+
+    <div class="card">
+      <div id="reveal" class="tiny">Status: warming up…</div>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="row">
+        <button id="sealNow">Seal it now</button>
+        <button id="forget">(Dev) Forget this device</button>
+      </div>
+      <p class="tiny" style="margin-top:14px">
+        Tip: Scroll slowly. The page watches time + attention.
+      </p>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h2 style="margin:0 0 8px; font-size:22px">What is happening here?</h2>
+      <p style="margin:0">
+        This site is built to feel like a one-time event. Your browser receives a “stamp”.
+        If the stamp exists, the site refuses to open again.
+      </p>
+    </div>
+  </div>
+
+  <div class="sealed" id="sealed">
+    <div class="box fade-in">
+      <h2>Sealed.</h2>
+      <p>
+        You’ve already used your only visit on this device/browser.
+        There is nothing to return to.
+      </p>
+      <p class="tiny" style="margin-top:10px">
+        (If you’re testing: click “Forget this device” on the live view, or clear site data.)
+      </p>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---- CONFIG ----
+  const KEY = "onevisit:v1:used";          // localStorage flag (per browser)
+  const SESSION_KEY = "onevisit:v1:active"; // session flag (per tab session)
+  const SEAL_REASON_KEY = "onevisit:v1:reason";
+
+  // ---- HELPERS ----
+  const $ = (id) => document.getElementById(id);
+
+  function showSealed(reason) {
+    $("live").style.display = "none";
+    $("sealed").style.display = "grid";
+    if (reason) localStorage.setItem(SEAL_REASON_KEY, reason);
+  }
+
+  function seal(reason="sealed") {
+    localStorage.setItem(KEY, "1");           // permanent (until cleared)
+    sessionStorage.removeItem(SESSION_KEY);   // end active session
+    localStorage.setItem(SEAL_REASON_KEY, reason);
+  }
+
+  // ---- ENFORCE ONE-TIME ENTRY ----
+  const alreadyUsed = localStorage.getItem(KEY) === "1";
+  if (alreadyUsed) {
+    showSealed(localStorage.getItem(SEAL_REASON_KEY) || "already_used");
+    return;
+  }
+
+  // Mark active session for this tab
+  sessionStorage.setItem(SESSION_KEY, "1");
+
+  // Seal if user refreshes or re-enters via BFCache weirdness
+  // (We seal on unload-like events and visibility changes)
+  let sealed = false;
+
+  function sealOnce(reason) {
+    if (sealed) return;
+    sealed = true;
+    seal(reason);
+  }
+
+  // If page becomes hidden (user switches away), you can choose to seal immediately.
+  // This makes it feel strict. Comment out if you want it gentler.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      sealOnce("left_page");
+    }
+  });
+
+  // Try to catch refresh / close
+  window.addEventListener("pagehide", (e) => {
+    // pagehide fires for navigation away; persist implies bfcache
+    sealOnce(e.persisted ? "bfcache_leave" : "navigate_away");
+  });
+
+  // User intent seal button
+  $("sealNow").addEventListener("click", () => {
+    sealOnce("user_sealed");
+    showSealed("user_sealed");
+  });
+
+  // Dev/testing: forget device
+  $("forget").addEventListener("click", () => {
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(SEAL_REASON_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
+    location.reload();
+  });
+
+  // ---- “LIVING” REVEAL: time + scroll attention ----
+  const start = performance.now();
+  const bar = $("bar");
+  const reveal = $("reveal");
+  const title = $("title");
+  const sub = $("sub");
+
+  let maxProgress = 0;
+
+  function update() {
+    const t = (performance.now() - start) / 1000; // seconds
+    const scroll = Math.min(1, (window.scrollY / (document.body.scrollHeight - innerHeight || 1)));
+    // attention score: weighted time + scroll
+    const score = Math.min(1, (t / 25) * 0.65 + scroll * 0.35);
+    maxProgress = Math.max(maxProgress, score);
+
+    bar.style.width = (maxProgress * 100).toFixed(1) + "%";
+
+    if (maxProgress < 0.25) {
+      reveal.textContent = "Status: warming up…";
+      title.textContent = "This visit will not exist again.";
+      sub.textContent = "Leave, refresh, or come back later — and the page will be sealed.";
+    } else if (maxProgress < 0.55) {
+      reveal.textContent = "Status: you’re staying. the page is responding…";
+      title.textContent = "The page is learning your pace.";
+      sub.textContent = "Slow attention unlocks more than fast clicks.";
+    } else if (maxProgress < 0.85) {
+      reveal.textContent = "Status: memory forming… (but only for now)";
+      title.textContent = "You’re inside a moment, not a website.";
+      sub.textContent = "When you exit, the moment ends. Permanently on this device.";
+    } else {
+      reveal.textContent = "Status: final reveal reached.";
+      title.textContent = "Before you go: notice what you were looking for.";
+      sub.textContent = "The one thing you wanted most… did you actually face it?";
+    }
+
+    requestAnimationFrame(update);
+  }
+  update();
+
+})();
+</script>
+</body>
+</html>
